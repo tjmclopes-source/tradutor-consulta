@@ -26,7 +26,7 @@
     <p><b>Como usar:</b> escolha a língua do utente lá em cima.<br>
     Toque no botão, fale, e toque de novo para terminar.</p>
     <p>Toque numa tradução para a mostrar em ecrã inteiro ao utente.</p>
-    <p class="nota">🔒 O áudio é processado só neste telemóvel e não é gravado. Apenas o texto é enviado ao tradutor (Microsoft, sem retenção). Evite dizer nomes ou números de utente.</p>
+    <p class="nota">🔒 O áudio é processado só neste telemóvel e não é gravado. No modo «no aparelho» também a tradução é feita aqui; no modo Azure só o texto é enviado (Microsoft, sem retenção). Evite dizer nomes ou números de utente.</p>
   </div>
 </main>
 
@@ -57,6 +57,12 @@
 <dialog id="dlgDef">
   <form method="dialog">
     <h2>Definições</h2>
+    <label>Tradutor
+      <select id="cfgTradutor">
+        <option value="local">No aparelho (sem internet, ~900 MB, mais lento, menos rigoroso)</option>
+        <option value="azure">Microsoft Azure (melhor, precisa de chave)</option>
+      </select>
+    </label>
     <label>Chave do Azure Translator
       <input id="cfgChave" type="password" autocomplete="off" placeholder="cole aqui a chave">
     </label>

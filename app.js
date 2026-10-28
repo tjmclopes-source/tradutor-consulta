@@ -1,17 +1,17 @@
 'use strict';
 
 // ---- Línguas ----
-const PT = { whisper: 'portuguese', de: 'pt', para: 'pt-pt' };
+const PT = { whisper: 'portuguese', de: 'pt', para: 'pt-pt', nllb: 'por_Latn' };
 const LINGUAS = {
-  it: { nome: 'Italiano', whisper: 'italian', azure: 'it', falar: 'Parli' },
-  fr: { nome: 'Français', whisper: 'french', azure: 'fr', falar: 'Parlez' },
-  ru: { nome: 'Русский', whisper: 'russian', azure: 'ru', falar: 'Говорите' },
-  ur: { nome: 'اردو (Urdu)', whisper: 'urdu', azure: 'ur', falar: 'بولیں', rtl: true },
+  it: { nome: 'Italiano', whisper: 'italian', azure: 'it', nllb: 'ita_Latn', falar: 'Parli' },
+  fr: { nome: 'Français', whisper: 'french', azure: 'fr', nllb: 'fra_Latn', falar: 'Parlez' },
+  ru: { nome: 'Русский', whisper: 'russian', azure: 'ru', nllb: 'rus_Cyrl', falar: 'Говорите' },
+  ur: { nome: 'اردو (Urdu)', whisper: 'urdu', azure: 'ur', nllb: 'urd_Arab', falar: 'بولیں', rtl: true },
   // Reconhecimento de voz fraco nestas duas: sugerir que o utente escreva
-  ne: { nome: 'नेपाली (Nepali)', whisper: 'nepali', azure: 'ne', falar: 'बोल्नुहोस्', vozFraca: true, escreva: 'यहाँ लेख्नुहोस्…' },
-  bn: { nome: 'বাংলা (Bengali)', whisper: 'bengali', azure: 'bn', falar: 'কথা বলুন', vozFraca: true, escreva: 'এখানে লিখুন…' },
+  ne: { nome: 'नेपाली (Nepali)', whisper: 'nepali', azure: 'ne', nllb: 'npi_Deva', falar: 'बोल्नुहोस्', vozFraca: true, escreva: 'यहाँ लेख्नुहोस्…' },
+  bn: { nome: 'বাংলা (Bengali)', whisper: 'bengali', azure: 'bn', nllb: 'ben_Beng', falar: 'কথা বলুন', vozFraca: true, escreva: 'এখানে লিখুন…' },
   // O Whisper às vezes escreve em caracteres tradicionais: deteção automática na entrada
-  zh: { nome: '中文 (Mandarim)', whisper: 'chinese', azure: 'zh-Hans', azureDe: '', falar: '请说话' },
+  zh: { nome: '中文 (Mandarim)', whisper: 'chinese', azure: 'zh-Hans', nllb: 'zho_Hans', azureDe: '', falar: '请说话' },
 };
 
 // ---- Definições (só neste telemóvel) ----
@@ -23,9 +23,11 @@ const cfg = {
   get modelo() { return lerCfg('modelo', 'small'); },
   get motor() { return lerCfg('motor', 'auto'); },
   get lingua() { return lerCfg('lingua', 'fr'); },
+  get tradutor() { return lerCfg('tradutor', 'local'); }, // 'local' (no aparelho) ou 'azure'
 };
 
 let modeloPronto = false;
+let tradLocalPronto = false;
 const $ = (id) => document.getElementById(id);
 const el = {
   lingua: $('lingua'), estado: $('estado'), barra: $('barra'), conversa: $('conversa'), vazio: $('vazio'),
@@ -77,8 +79,8 @@ worker.onmessage = (e) => {
     el.barra.hidden = true;
     el.btnMedico.disabled = false;
     el.btnUtente.disabled = false;
-    if (!cfg.chave) estado('Pronto. Falta a chave do tradutor — toque em ⚙️.', true);
-    else atualizarLingua();
+    if (cfg.tradutor === 'local' && !tradLocalPronto) carregarTradutorLocal();
+    else mensagemPronto();
   } else if (m.type === 'texto' || m.type === 'erro') {
     const p = pendentes.get(m.id);
     if (!p) {
@@ -104,6 +106,51 @@ function transcrever(audio, lingua) {
     const id = proxId++;
     pendentes.set(id, { ok, falha });
     worker.postMessage({ type: 'transcrever', id, audio, lingua }, [audio.buffer]);
+  });
+}
+
+function mensagemPronto() {
+  if (cfg.tradutor === 'azure' && !cfg.chave) estado('Pronto. Falta a chave do Azure — toque em ⚙️.', true);
+  else atualizarLingua();
+}
+
+// ---- Tradução no aparelho (worker local, NLLB) ----
+let trabTrad = null;
+const progressoTrad = {};
+function carregarTradutorLocal() {
+  if (!trabTrad) {
+    trabTrad = new Worker('traducao-worker.js', { type: 'module' });
+    trabTrad.onmessage = (e) => {
+      const m = e.data;
+      if (m.type === 'progresso') {
+        progressoTrad[m.ficheiro] = [m.carregado, m.total];
+        let c = 0, t = 0;
+        for (const [a, b] of Object.values(progressoTrad)) { c += a; t += b; }
+        el.barra.hidden = false;
+        el.barra.firstElementChild.style.width = (100 * c / t).toFixed(0) + '%';
+        estado(`A carregar o modelo de tradução (só da 1.ª vez demora): ${(c / 1e6).toFixed(0)} / ${(t / 1e6).toFixed(0)} MB`);
+      } else if (m.type === 'pronto') {
+        tradLocalPronto = true;
+        el.barra.hidden = true;
+        mensagemPronto();
+      } else {
+        const p = pendentes.get(m.id);
+        if (!p) { if (m.type === 'erro') estado('Erro no modelo de tradução: ' + m.mensagem, true); return; }
+        pendentes.delete(m.id);
+        m.type === 'texto' ? p.ok(m.texto) : p.falha(new Error(m.mensagem));
+      }
+    };
+  }
+  estado('A carregar o modelo de tradução…');
+  trabTrad.postMessage({ type: 'carregar' });
+}
+
+function traduzirLocal(texto, de, para) {
+  if (!tradLocalPronto) return Promise.reject(new Error('O modelo de tradução ainda está a carregar. Aguarde.'));
+  return new Promise((ok, falha) => {
+    const id = proxId++;
+    pendentes.set(id, { ok, falha });
+    trabTrad.postMessage({ type: 'traduzir', id, texto, de, para });
   });
 }
 
@@ -235,9 +282,16 @@ async function preencherCartao(c, quem, lingua, texto, msVoz) {
   orig.dir = quem === 'utente' && lingua.rtl ? 'rtl' : 'auto';
   estado('A traduzir…');
   const t0 = performance.now();
-  const resultado = quem === 'medico'
-    ? await traduzir(texto, PT.de, lingua.azure)
-    : await traduzir(texto, lingua.azureDe ?? lingua.azure, PT.para);
+  let resultado;
+  if (cfg.tradutor === 'local') {
+    resultado = quem === 'medico'
+      ? await traduzirLocal(texto, PT.nllb, lingua.nllb)
+      : await traduzirLocal(texto, lingua.nllb, PT.nllb);
+  } else {
+    resultado = quem === 'medico'
+      ? await traduzir(texto, PT.de, lingua.azure)
+      : await traduzir(texto, lingua.azureDe ?? lingua.azure, PT.para);
+  }
   const msTrad = Math.round(performance.now() - t0);
   trad.textContent = resultado;
   trad.dir = quem === 'medico' && lingua.rtl ? 'rtl' : 'auto';
@@ -303,6 +357,7 @@ $('btnLimpar').onclick = () => {
 // ---- Definições ----
 const dlg = $('dlgDef');
 function abrirDefinicoes() {
+  $('cfgTradutor').value = cfg.tradutor;
   $('cfgChave').value = cfg.chave;
   $('cfgRegiao').value = cfg.regiao;
   $('cfgModelo').value = cfg.modelo;
@@ -313,12 +368,14 @@ $('btnDef').onclick = abrirDefinicoes;
 dlg.addEventListener('close', () => {
   if (dlg.returnValue !== 'guardar') return;
   const mudouModelo = $('cfgModelo').value !== cfg.modelo || $('cfgMotor').value !== cfg.motor;
+  gravarCfg('tradutor', $('cfgTradutor').value);
   gravarCfg('azureChave', $('cfgChave').value.trim());
   gravarCfg('azureRegiao', $('cfgRegiao').value.trim());
   gravarCfg('modelo', $('cfgModelo').value);
   gravarCfg('motor', $('cfgMotor').value);
   if (mudouModelo) carregarModelo();
-  else if (modeloPronto) estado(cfg.chave ? 'Definições guardadas.' : 'Falta a chave do tradutor.', !cfg.chave);
+  else if (cfg.tradutor === 'local' && !tradLocalPronto) carregarTradutorLocal();
+  else if (modeloPronto) mensagemPronto();
 });
 
 // ---- Manter o ecrã ligado durante a consulta ----
@@ -333,4 +390,4 @@ pedirEcraLigado();
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 
 carregarModelo();
-if (!cfg.chave) abrirDefinicoes();
+if (cfg.tradutor === 'azure' && !cfg.chave) abrirDefinicoes();
