@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b5d57">
+<meta name="referrer" content="no-referrer">
+<title>Tradutor de Consulta</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="titulo">Tradutor de Consulta</div>
+  <select id="lingua" aria-label="Língua do utente"></select>
+  <button id="btnDef" class="icone" aria-label="Definições">⚙️</button>
+</header>
+
+<div id="estado" class="estado">A preparar…</div>
+<div id="barra" class="barra" hidden><div></div></div>
+
+<main id="conversa" aria-live="polite">
+  <div class="vazio" id="vazio">
+    <p><b>Como usar:</b> escolha a língua do utente lá em cima.<br>
+    Toque no botão, fale, e toque de novo para terminar.</p>
+    <p>Toque numa tradução para a mostrar em ecrã inteiro ao utente.</p>
+    <p class="nota">🔒 O áudio é processado só neste telemóvel e não é gravado. Apenas o texto é enviado ao tradutor (Microsoft, sem retenção). Evite dizer nomes ou números de utente.</p>
+  </div>
+</main>
+
+<div class="escrever">
+  <input id="txt" type="text" placeholder="Ou escreva aqui…" autocomplete="off">
+  <button id="txtMedico" title="Traduzir do português">PT→</button>
+  <button id="txtUtente" title="Traduzir para português">→PT</button>
+</div>
+
+<footer>
+  <button id="btnMedico" class="falar medico" disabled>
+    <span class="quem">🩺 Médico</span><span class="acao">Falar (PT)</span>
+  </button>
+  <button id="btnUtente" class="falar utente" disabled>
+    <span class="quem">🧑 Utente</span><span class="acao" id="acaoUtente">Falar</span>
+  </button>
+</footer>
+<button id="btnLimpar" class="limpar">Limpar conversa</button>
+
+<div id="ecraInteiro" class="ecra-inteiro" hidden>
+  <div id="eiTexto" class="ei-texto"></div>
+  <div class="ei-botoes">
+    <button id="eiVirar">↻ Virar</button>
+    <button id="eiFechar">✕ Fechar</button>
+  </div>
+</div>
+
+<dialog id="dlgDef">
+  <form method="dialog">
+    <h2>Definições</h2>
+    <label>Chave do Azure Translator
+      <input id="cfgChave" type="password" autocomplete="off" placeholder="cole aqui a chave">
+    </label>
+    <label>Região do recurso Azure
+      <input id="cfgRegiao" type="text" autocomplete="off" placeholder="ex.: westeurope">
+    </label>
+    <label>Modelo de voz
+      <select id="cfgModelo">
+        <option value="small">Normal (mais preciso, ~250 MB)</option>
+        <option value="base">Rápido (menos preciso, ~80 MB)</option>
+      </select>
+    </label>
+    <label>Processamento
+      <select id="cfgMotor">
+        <option value="auto">Automático (GPU se disponível)</option>
+        <option value="cpu">Só CPU (se houver erros)</option>
+      </select>
+    </label>
+    <p class="nota">A chave fica guardada apenas neste telemóvel.</p>
+    <div class="dlg-botoes">
+      <button value="cancelar" formnovalidate>Cancelar</button>
+      <button value="guardar" id="cfgGuardar" class="primario">Guardar</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="app.js"></script>
+</body>
+</html>
