@@ -1,5 +1,5 @@
 // Guarda só os ficheiros da própria app (não guarda conversas nem áudio).
-const VERSAO = 'tradutor-v2';
+const VERSAO = 'tradutor-v3';
 const FICHEIROS = ['./', 'index.html', 'app.js', 'worker.js', 'traducao-worker.js', 'style.css', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', (e) => {

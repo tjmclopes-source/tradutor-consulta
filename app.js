@@ -299,6 +299,18 @@ async function preencherCartao(c, quem, lingua, texto, msVoz) {
   c.classList.remove('a-processar', 'erro');
   c.querySelector('.tempo').textContent = msVoz != null ? `voz ${(msVoz / 1000).toFixed(1)} s · trad. ${(msTrad / 1000).toFixed(1)} s` : '';
 
+  // Retro-tradução: o médico confirma em português o que o utente vai ler (não atrasa a tradução)
+  let retro = c.querySelector('.retro');
+  if (quem === 'medico') {
+    if (!retro) { retro = document.createElement('div'); retro.className = 'retro'; trad.after(retro); }
+    retro.textContent = '↩ a verificar…';
+    (cfg.tradutor === 'local'
+      ? traduzirLocal(resultado, lingua.nllb, PT.nllb)
+      : traduzir(resultado, lingua.azureDe ?? lingua.azure, PT.para)
+    ).then((t) => { if (trad.textContent === resultado) retro.textContent = '↩ ' + t; })
+     .catch(() => { retro.textContent = ''; });
+  } else if (retro) retro.remove();
+
   // Corrigir o texto reconhecido e voltar a traduzir
   if (!c.querySelector('.editar')) {
     const b = document.createElement('button');

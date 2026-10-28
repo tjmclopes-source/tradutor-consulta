@@ -57,6 +57,7 @@ main { flex: 1; overflow-y: auto; padding: 8px 16px; }
 .cartao .cab { font-size: 13px; color: var(--suave); display: flex; justify-content: space-between; gap: 8px; }
 .cartao .original { font-size: 15px; color: var(--suave); margin: 4px 0; }
 .cartao .traducao { font-size: 22px; font-weight: 600; cursor: pointer; }
+.cartao .retro { font-size: 14px; color: var(--suave); font-style: italic; margin-top: 4px; }
 .cartao .editar { background: none; border: 0; color: var(--suave); font-size: 13px; padding: 0; text-decoration: underline; }
 .cartao.erro .traducao { color: var(--erro); font-size: 16px; }
 .a-processar { opacity: .7; }
